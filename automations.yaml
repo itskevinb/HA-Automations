@@ -88,6 +88,9 @@
     state: 'on'
   - delay:
       minutes: 20
+  - condition: state
+    entity_id: binary_sensor.bed_pressure_occupied
+    state: 'on'
   - action: light.turn_on
     target:
       entity_id:
@@ -122,14 +125,25 @@
     event: sunrise
     offset: 0
     id: dawn
+  - trigger: state
+    entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+    to: 'off'
+    id: sleep_mode_cleared
   actions:
   - choose:
     - conditions:
-      - condition: trigger
-        id: dusk
+      - condition: or
+        conditions:
+        - condition: trigger
+          id: dusk
+        - condition: trigger
+          id: sleep_mode_cleared
       - condition: state
         entity_id: input_boolean.input_boolean_bedroom_sleep_mode
         state: 'off'
+      - condition: sun
+        after: sunset
+        before: sunrise
       sequence:
       - action: light.turn_on
         target:
@@ -353,6 +367,11 @@
     - trigger: state
       entity_id: binary_sensor.motion_sensor
       to: 'off'
+    timeout: '01:00:00'
+    continue_on_timeout: true
+  - condition: state
+    entity_id: binary_sensor.motion_sensor
+    state: 'off'
   - delay:
       seconds: "{% if is_state('input_boolean.input_boolean_bedroom_sleep_mode', 'on')
         %}\n  90\n{% else %}\n  570\n{% endif %}\n"
@@ -424,6 +443,11 @@
     - trigger: state
       entity_id: binary_sensor.music_room_motion
       to: 'off'
+    timeout: '02:00:00'
+    continue_on_timeout: true
+  - condition: state
+    entity_id: binary_sensor.music_room_motion
+    state: 'off'
   - delay:
       seconds: "{% if is_state('input_boolean.input_boolean_bedroom_sleep_mode', 'on')
         %}\n  90\n{% else %}\n  570\n{% endif %}\n"
@@ -431,6 +455,8 @@
       ''paused'', ''standby'', ''unavailable''] }}
 
       '
+    timeout: '02:00:00'
+    continue_on_timeout: true
   - action: input_boolean.turn_off
     target:
       entity_id: input_boolean.music_room_occupied
@@ -490,6 +516,11 @@
     - trigger: state
       entity_id: binary_sensor.contact_sensor_2
       to: 'off'
+    timeout: 00:10:00
+    continue_on_timeout: true
+  - condition: state
+    entity_id: binary_sensor.contact_sensor_2
+    state: 'off'
   - wait_for_trigger:
     - trigger: state
       entity_id: binary_sensor.motion_sensor
