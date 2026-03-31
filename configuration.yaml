@@ -1,0 +1,73 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+homeassistant:
+  customize:
+    media_player.spotify_babe:
+      scan_interval: 5
+    media_player.spotify_itskevinbbitch:
+      scan_interval: 5
+
+binary_sensor:
+  - platform: mqtt
+    name: "BackCam Motion"
+    unique_id: backcam_motion
+    state_topic: "cameraui/BackCam/motion"
+    payload_on: "true"
+    payload_off: "false"
+    device_class: motion
+
+mqtt:
+  binary_sensor:
+    - name: "Bed Radar Presence"
+      unique_id: bed_radar_presence
+      state_topic: "bed/radar/presence"
+      payload_on: "ON"
+      payload_off: "OFF"
+      device_class: occupancy
+      availability:
+        - topic: "bed/pressure/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+
+    - name: "Bed Pressure Occupied"
+      unique_id: bed_pressure_occupied
+      state_topic: "bed/pressure/occupied"
+      payload_on: "ON"
+      payload_off: "OFF"
+      device_class: occupancy
+      availability:
+        - topic: "bed/pressure/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+
+  sensor:
+    - name: "Bed Radar Distance"
+      unique_id: bed_radar_distance
+      state_topic: "bed/radar/distance"
+      unit_of_measurement: ""
+      icon: mdi:signal-distance-variant
+      availability:
+        - topic: "bed/pressure/status"
+          payload_available: "online"
+          payload_not_available: "offline"
+
+    - name: "Bed Pressure Voltage"
+      unique_id: bed_pressure_voltage
+      state_topic: "bed/pressure/voltage"
+      unit_of_measurement: "V"
+      device_class: voltage
+      icon: mdi:flash
+      availability:
+        - topic: "bed/pressure/status"
+          payload_available: "online"
+          payload_not_available: "offline"

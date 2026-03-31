@@ -1,0 +1,516 @@
+- id: '1772125687962'
+  alias: Dining Room Stereo Amp Control
+  triggers:
+  - id: turn_on
+    entity_id:
+    - media_player.spotify_itskevinbbitch
+    - media_player.spotify_babe
+    to: playing
+    trigger: state
+  - id: turn_off
+    entity_id:
+    - media_player.spotify_itskevinbbitch
+    - media_player.spotify_babe
+    from: playing
+    for: 00:05:00
+    trigger: state
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: turn_on
+      - condition: template
+        value_template: '{{ state_attr(trigger.entity_id, ''source'') == ''Dining
+          Room Stereo'' }}
+
+          '
+      sequence:
+      - type: turn_on
+        device_id: a9e9e134e954a6d35933e4c9545ac817
+        entity_id: a4bb4b07c22a429e8ed71b6f418c1929
+        domain: switch
+    - conditions:
+      - condition: trigger
+        id: turn_off
+      - condition: template
+        value_template: "{{\n  not (\n    states('media_player.spotify_itskevinbbitch')
+          == 'playing' and\n    state_attr('media_player.spotify_itskevinbbitch',
+          'source') == 'Dining Room Stereo'\n  )\n  and\n  not (\n    states('media_player.spotify_babe')
+          == 'playing' and\n    state_attr('media_player.spotify_babe', 'source')
+          == 'Dining Room Stereo'\n  )\n}}\n"
+      sequence:
+      - type: turn_off
+        device_id: a9e9e134e954a6d35933e4c9545ac817
+        entity_id: a4bb4b07c22a429e8ed71b6f418c1929
+        domain: switch
+  mode: restart
+- id: '1772235277095'
+  alias: In bed
+  description: Activates sleep mode and prepares bedroom lighting when bed occupancy
+    is detected.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.bed_pressure_occupied
+    to: 'on'
+    for:
+      seconds: 10
+  conditions:
+  - condition: time
+    after: '21:00:00'
+    before: '23:30:00'
+  - condition: state
+    entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+    state: 'off'
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+  - delay:
+      seconds: 5
+  - action: media_player.turn_on
+    target:
+      entity_id: media_player.apple_tv_mb
+  - action: light.turn_on
+    target:
+      area_id: bedroom
+    data:
+      brightness_pct: 30
+      transition: 60
+  - delay:
+      minutes: 10
+  - action: light.turn_off
+    target:
+      device_id: 75bf710c89035a0da9a4ca1aae0cffc1
+    data:
+      transition: 300
+  - condition: state
+    entity_id: binary_sensor.bed_pressure_occupied
+    state: 'on'
+  - delay:
+      minutes: 20
+  - action: light.turn_on
+    target:
+      entity_id:
+      - light.r_vanity
+      - light.l_vanity
+    data:
+      rgb_color:
+      - 255
+      - 0
+      - 0
+      brightness_pct: 65
+      transition: 120
+  - action: light.turn_on
+    target:
+      entity_id: light.bedside
+    data:
+      brightness_pct: '{{ min(21, (state_attr(''light.bedside'', ''brightness'') |
+        float(0) / 2.55)) | round(0) }}
+
+        '
+      transition: 57
+  mode: single
+- id: '1772241691325'
+  alias: Outdoor Lighting - Automated Cycle
+  description: Manages outdoor lights from sunset to sunrise.
+  triggers:
+  - trigger: sun
+    event: sunset
+    offset: 0
+    id: dusk
+  - trigger: sun
+    event: sunrise
+    offset: 0
+    id: dawn
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: dusk
+      - condition: state
+        entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+        state: 'off'
+      sequence:
+      - action: light.turn_on
+        target:
+          area_id:
+          - front_patio
+          - back_patio
+        data:
+          transition: 300
+          color_temp_kelvin: 2293
+          brightness_pct: 100
+    - conditions:
+      - condition: trigger
+        id: dawn
+      sequence:
+      - action: light.turn_off
+        target:
+          area_id:
+          - front_patio
+          - back_patio
+        data:
+          transition: 300
+  mode: parallel
+- id: '1772252446404'
+  alias: tv off bedtime
+  description: Turn off lights when TV stops, only if in bed and during late hours.
+  triggers:
+  - trigger: state
+    entity_id:
+    - media_player.apple_tv_mb
+    to:
+    - 'off'
+    - paused
+    - standby
+    - idle
+    for:
+      seconds: 10
+  conditions:
+  - condition: time
+    after: '22:00:00'
+    before: 03:00:00
+  - condition: state
+    entity_id: binary_sensor.bed_pressure_occupied
+    state: 'on'
+  actions:
+  - action: light.turn_off
+    target:
+      area_id: bedroom
+    data:
+      transition: 10
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+  - delay:
+      seconds: 20
+  - action: light.turn_off
+    target:
+      floor_id: main_level
+    data:
+      transition: 15
+  mode: single
+- id: '1772906911448'
+  alias: Empty MasterBed
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - binary_sensor.bed_radar_presence
+    to:
+    - 'off'
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+    from:
+    - 'on'
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.bed_pressure_occupied
+    state:
+    - 'off'
+  - condition: state
+    entity_id: media_player.apple_tv_mb
+    state:
+    - 'off'
+    - idle
+    - standby
+    - paused
+  actions:
+  - action: light.turn_off
+    metadata: {}
+    target:
+      area_id: bedroom
+    data:
+      transition: 15
+  mode: single
+- id: '1772907022648'
+  alias: NotEmptyMasterbed (with Night Mode)
+  description: Triggers full brightness during the day and dim warmth at night.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.bed_radar_presence
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.bed_pressure_occupied
+    state: 'off'
+  - condition: state
+    entity_id: media_player.apple_tv_mb
+    state:
+    - 'off'
+    - idle
+    - standby
+    - unavailable
+    - unknown
+    - paused
+  - condition: state
+    entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+    state:
+    - 'off'
+  - condition: device
+    type: is_off
+    device_id: d45e0726dedf44865cb74f07e807f159
+    entity_id: 050417f60c7ac8a03b05ad352bad6bb2
+    domain: light
+  - condition: state
+    entity_id: light.main_light
+    state:
+    - 'off'
+    - unavailable
+    - unknown
+  - condition: device
+    type: is_off
+    device_id: 47f97f545342e1049b157484e5aa97d7
+    entity_id: 4980e64945e74f906edf9221778116ac
+    domain: light
+  - condition: device
+    type: is_off
+    device_id: cff806cfd373850ada893019e5680408
+    entity_id: 16e1b4cafcf690dca9ea9dbd24416487
+    domain: light
+  actions:
+  - choose:
+    - conditions:
+      - condition: time
+        after: '21:00:00'
+        before: 07:00:00
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id:
+          - light.bedside
+          - light.r_vanity
+          - light.l_vanity
+          - light.main_light
+        data:
+          transition: 5
+          brightness_pct: 45
+          color_temp_kelvin: 2255
+    - conditions: []
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id:
+          - light.bedside
+          - light.r_vanity
+          - light.l_vanity
+          - light.main_light
+        data:
+          transition: 3
+          color_temp_kelvin: 3891
+          brightness_pct: 100
+  mode: single
+- id: '1773432705822'
+  alias: Bedroom Sleep Mode - Reset
+  description: Clears sleep mode latch when any bedroom light is manually turned on
+    after 07:00.
+  triggers:
+  - entity_id:
+    - light.bedside
+    - light.r_vanity
+    - light.l_vanity
+    - light.main_light
+    to: 'on'
+    trigger: state
+  conditions:
+  - condition: state
+    entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+    state:
+    - 'on'
+  - condition: time
+    after: 07:00:00
+    before: '21:00:00'
+  actions:
+  - action: input_boolean.turn_off
+    data: {}
+    target:
+      entity_id: input_boolean.input_boolean_bedroom_sleep_mode
+  mode: single
+- id: '1773531897998'
+  alias: Kitchen - Islands + Sunroom
+  description: Kitchen motion controls islands and sunroom; sunroom stays on if music
+    room is occupied
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.motion_sensor
+    to: 'on'
+  actions:
+  - action: light.turn_on
+    target:
+      entity_id:
+      - light.kitchen_island
+      - light.kitchen_island_2
+      - light.sunroom_main
+    data:
+      transition: 2
+      brightness_pct: '{{ 50 if is_state(''input_boolean.input_boolean_bedroom_sleep_mode'',
+        ''on'') else 100 }}
+
+        '
+  - wait_for_trigger:
+    - trigger: state
+      entity_id: binary_sensor.motion_sensor
+      to: 'off'
+  - delay:
+      seconds: "{% if is_state('input_boolean.input_boolean_bedroom_sleep_mode', 'on')
+        %}\n  90\n{% else %}\n  570\n{% endif %}\n"
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.music_room_occupied
+        state: 'on'
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id:
+          - light.kitchen_island
+          - light.kitchen_island_2
+        data:
+          transition: 3
+          brightness_pct: 10
+      - delay: 30
+      - action: light.turn_off
+        target:
+          entity_id:
+          - light.kitchen_island
+          - light.kitchen_island_2
+        data:
+          transition: 29
+    default:
+    - action: light.turn_on
+      target:
+        entity_id:
+        - light.kitchen_island
+        - light.kitchen_island_2
+        - light.sunroom_main
+      data:
+        transition: 3
+        brightness_pct: 10
+    - delay: 30
+    - action: light.turn_off
+      target:
+        entity_id:
+        - light.kitchen_island
+        - light.kitchen_island_2
+        - light.sunroom_main
+      data:
+        transition: 29
+  mode: restart
+- id: '1774652076719'
+  alias: Music Room - Lights + Sunroom Off
+  description: Music room motion controls music room lights; off sequence also handles
+    sunroom if kitchen is empty
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.music_room_motion
+    to: 'on'
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.music_room_occupied
+  - action: light.turn_on
+    target:
+      area_id: music_room
+      entity_id: light.sunroom_main
+    data:
+      transition: 2
+      brightness_pct: '{{ 50 if is_state(''input_boolean.input_boolean_bedroom_sleep_mode'',
+        ''on'') else 100 }}
+
+        '
+  - wait_for_trigger:
+    - trigger: state
+      entity_id: binary_sensor.music_room_motion
+      to: 'off'
+  - delay:
+      seconds: "{% if is_state('input_boolean.input_boolean_bedroom_sleep_mode', 'on')
+        %}\n  90\n{% else %}\n  570\n{% endif %}\n"
+  - wait_template: '{{ states(''media_player.music_room'') in [''idle'', ''off'',
+      ''paused'', ''standby'', ''unavailable''] }}
+
+      '
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.music_room_occupied
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: binary_sensor.motion_sensor
+        state: 'on'
+      sequence:
+      - action: light.turn_on
+        target:
+          area_id: music_room
+        data:
+          transition: 3
+          brightness_pct: 10
+      - delay: 30
+      - action: light.turn_off
+        target:
+          area_id: music_room
+        data:
+          transition: 29
+    default:
+    - action: light.turn_on
+      target:
+        area_id: music_room
+        entity_id: light.sunroom_main
+      data:
+        transition: 3
+        brightness_pct: 10
+    - delay: 30
+    - action: light.turn_off
+      target:
+        area_id: music_room
+        entity_id: light.sunroom_main
+      data:
+        transition: 29
+  mode: restart
+- id: '1774660054510'
+  alias: Garage Entrance - Sunroom On
+  description: Turns on sunroom from garage. Hands off to house motion sensors, or
+    turns off if they return to garage.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.contact_sensor_2
+    to: 'on'
+  actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.sunroom_main
+    data:
+      transition: 2
+      brightness_pct: '{{ 50 if is_state(''input_boolean.input_boolean_bedroom_sleep_mode'',
+        ''on'') else 100 }}
+
+        '
+  - wait_for_trigger:
+    - trigger: state
+      entity_id: binary_sensor.contact_sensor_2
+      to: 'off'
+  - wait_for_trigger:
+    - trigger: state
+      entity_id: binary_sensor.motion_sensor
+      to: 'on'
+    - trigger: state
+      entity_id: binary_sensor.music_room_motion
+      to: 'on'
+    timeout: 00:03:00
+    continue_on_timeout: true
+  - condition: template
+    value_template: '{{ wait.trigger == none }}'
+  - action: light.turn_on
+    target:
+      entity_id: light.sunroom_main
+    data:
+      transition: 3
+      brightness_pct: 10
+  - delay: 30
+  - action: light.turn_off
+    target:
+      entity_id: light.sunroom_main
+    data:
+      transition: 29
+  mode: restart
